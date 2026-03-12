@@ -1,78 +1,124 @@
 # RWD TrustChain — Production Readiness & Compliance
 
-> 本文档说明本地 Pilot 如何映射到生产级架构，以及如何满足医疗行业的高合规要求。
+> This document describes how the local Pilot maps to production architecture and how it addresses healthcare compliance requirements (GDPR, EU AI Act, HIPAA, 21 CFR Part 11).
 
 ---
 
-## 一、本地组件 → 生产组件映射
+## 1. Local Components → Production Mapping
 
-| 概念层 | 本地 Pilot | 生产级替代 | 扩展性说明 |
-|--------|------------|------------|------------|
-| **Secure Landing** | `data/synthea1k/` 目录 | Amazon S3 + SSE-KMS + IAM | S3 支持 PB 级存储、多区域复制；IAM 细粒度访问控制 |
-| **ETL & OMOP** | `load_synthea_duckdb.py` + DuckDB | AWS Glue + RDS PostgreSQL | Glue 无服务器、按需扩展；RDS 支持读写分离、多 AZ |
-| **存储** | DuckDB 单文件 | RDS PostgreSQL / Aurora | 同一 OMOP schema，迁移时仅改连接串 |
-| **PPRL** | 单源（暂无） | 独立 PPRL Service（Lambda / ECS） | 加密哈希、假名化、安全多方计算可插拔 |
-| **AI Validation** | `validate_omop_quality.py` + Isolation Forest | SageMaker / Lambda + ML 模型 | 规则 + ML 可并存；SageMaker 支持训练与推理托管 |
-| **Hash Anchoring** | `anchor_hashes.py` → JSON | 同上逻辑 → Permissioned Blockchain | 哈希算法与存证逻辑不变，仅输出目标改为链上 |
-| **Governance Dashboard** | Streamlit（待实现） | QuickSight / 自建 React + API | 数据源与 API 一致，前端可替换 |
-
----
-
-## 二、数据量扩展路径
-
-| 数据规模 | 本地 Pilot | 生产建议 |
-|----------|------------|----------|
-| **1k–10k 人** | DuckDB 单机 | 同左，或 RDS 单实例 |
-| **10k–100k 人** | DuckDB 仍可 | RDS 增大实例；Glue 分批 ETL |
-| **100k–1M+ 人** | 需分批/分区 | RDS 读写分离；Glue 并行 job；S3 分区存储 |
-| **多区域/联邦** | 不适用 | EHDS 联邦架构；跨区域 PPRL |
-
-**结论**：TrustChain 的流程与 schema 与数据量无关；扩展时主要调整存储与计算资源，不改变核心逻辑。
+| Concept | Local Pilot | Production Alternative | Scalability Notes |
+|---------|-------------|------------------------|-------------------|
+| **Secure Landing** | `data/synthea1k/` directory | Amazon S3 + SSE-KMS + IAM | S3 supports PB-scale storage, multi-region replication; IAM fine-grained access control |
+| **ETL & OMOP** | `load_synthea_duckdb.py` + DuckDB | AWS Glue + RDS PostgreSQL | Glue serverless, on-demand scaling; RDS read replicas, multi-AZ |
+| **Storage** | DuckDB single file | RDS PostgreSQL / Aurora | Same OMOP schema; change connection string on migration |
+| **PPRL** | Single source (design only); see `PPRL_Design.md` | Standalone PPRL Service (Lambda / ECS) | Cryptographic hashing, pseudonymization, Bloom filter, SMPC pluggable |
+| **AI Validation** | `validate_omop_quality.py` (scenario1/scenario2) | SageMaker / Lambda + ML models | Rules + IF/Ensemble coexist; SageMaker for training and inference |
+| **Hash Anchoring** | `anchor_hashes.py` → JSON | Same logic → Permissioned Blockchain | Hash algorithm and attestation logic unchanged; output target switches to chain |
+| **Governance Dashboard** | Streamlit (`04-deployment/app.py`) | QuickSight / custom React + API | HBV cascade, quality, provenance, MLflow link; frontend replaceable |
 
 ---
 
-## 三、合规性设计
+## 2. Data Volume Scaling Path
 
-### 3.1 已内置的合规原则
+| Data Scale | Local Pilot | Production Recommendation |
+|------------|-------------|---------------------------|
+| **1k–10k persons** | DuckDB single-node | Same, or RDS single instance |
+| **10k–100k persons** | DuckDB still viable | RDS larger instance; Glue batch ETL |
+| **100k–1M+ persons** | Requires batching/partitioning | RDS read replicas; Glue parallel jobs; S3 partitioned storage |
+| **Multi-region / federated** | N/A | EHDS federated architecture; cross-region PPRL |
 
-| 合规项 | 设计体现 | 本地实现 | 生产实现 |
-|--------|----------|----------|----------|
-| **NO PHI on Blockchain** | 仅哈希上链 | `anchor_hashes.py` 只输出 hash_value | 同上，提交到 permissioned chain |
-| **GDPR** | 最小必要、假名化、访问控制 | 数据本地、无 PHI 上链 | S3 加密、IAM、假名化 pipeline |
-| **HIPAA** | 加密、审计、访问日志 | 本地文件权限 | S3 SSE-KMS、CloudTrail、IAM |
-| **21 CFR Part 11** | 电子记录可审计 | Provenance manifest 记录每步 | 同上 + 链上不可篡改 |
-| **EU AI Act** | 高风险 AI 治理 | AI 模块可独立审计 | 模型注册、监控、可解释性 |
-
-### 3.2 合规检查清单（生产部署前）
-
-- [ ] 数据加密（传输 TLS，静态 KMS）
-- [ ] 访问控制（IAM / RBAC，最小权限）
-- [ ] 审计日志（谁在何时访问/修改了何数据）
-- [ ] 数据保留与删除策略（GDPR 被遗忘权）
-- [ ] AI 模型治理（EU AI Act：数据、监控、文档）
-- [ ] 无 PHI 上链（仅哈希/元数据）
+**Conclusion**: TrustChain flow and schema are data-volume agnostic; scaling mainly adjusts storage and compute resources without changing core logic.
 
 ---
 
-## 四、AI 模块的可扩展性
+## 3. Compliance Mapping
 
-| 当前实现 | 生产扩展 |
-|----------|----------|
-| 规则引擎（null、时间、外键） | 保留，作为第一道防线 |
-| Isolation Forest（measurement 异常值） | 可替换为 SageMaker 自定义模型、LLM 校验 |
-| 未来：Gap 预测模型 | XGBoost / 神经网络，托管于 SageMaker |
+### 3.1 GDPR — Article-Level Mapping
 
-**设计原则**：AI 模块与数据层、存储层解耦；输入输出为结构化 JSON，便于替换与版本管理。
+| GDPR Article | Requirement | TrustChain Implementation | Evidence |
+|--------------|-------------|---------------------------|----------|
+| **Art. 5(1)(c) Data minimization** | Process only data necessary for the purpose | OMOP CDM stores only clinical/operational fields; PPRL uses linkage attributes only (YOB, gender); no raw names/addresses in linkage keys | `PPRL_Design.md` §4; `validate_omop_quality.py` |
+| **Art. 5(1)(f) Integrity & confidentiality** | Appropriate security of personal data | Hash anchoring; no PHI on blockchain; provenance manifest for audit | `anchor_hashes.py`; §3.2 |
+| **Art. 25 Data protection by design and by default** | Technical and organizational measures; pseudonymization | PPRL design: linkage keys only, no PHI transmitted; default processing limited to necessary scope | `PPRL_Design.md` §2, §4 |
+| **Art. 32 Security of processing** | Encryption, pseudonymization, resilience, regular testing | Production: S3 SSE-KMS, IAM; PPRL: salted hashes, non-reversible linkage keys | `PPRL_Design.md` §5; production mapping |
+| **Art. 33 Breach notification** | Notify supervisory authority within 72h | Production process; not applicable to synthetic Pilot | N/A (synthetic data) |
+| **Art. 35 DPIA** | Data protection impact assessment for high-risk processing | Required for production with real PHI; Pilot uses Synthea (synthetic) | Roadmap item |
+
+### 3.2 EU AI Act — High-Risk AI Governance
+
+| EU AI Act Requirement | TrustChain Implementation | Evidence |
+|-----------------------|---------------------------|----------|
+| **Risk management** | AI validation (anomaly detection) operates on OMOP; rules + ML; configurable contamination/threshold | `validate_omop_quality.py`; scenario1/scenario2 |
+| **Data governance** | OMOP CDM standard; quality reports; provenance manifest | `data/quality_reports/`; `anchor_hashes.py` |
+| **Technical documentation** | Validation logic documented; MLflow logs model params and metrics | `02-data-sampling-feature/README.md`; MLflow artifacts |
+| **Transparency** | Dashboard shows AI validation status, anomaly counts, module used | `04-deployment/app.py` |
+| **Human oversight** | Validation outputs require human review before downstream use; no autonomous decision on patient care | Design principle |
+| **Record-keeping** | Provenance manifest; quality reports; MLflow runs | `data/provenance/`; `data/quality_reports/`; `mlruns/` |
+| **Accuracy & robustness** | Isolation Forest + ensemble (scenario2); configurable; no direct clinical decision | `validate_omop_quality.py` |
+
+**Note**: The Pilot’s AI validation (anomaly detection on data quality) may fall below “high-risk” under Annex III; production deployment with real PHI would require formal classification and conformity assessment.
+
+### 3.3 HIPAA (US)
+
+| HIPAA Requirement | TrustChain Implementation | Evidence |
+|-------------------|---------------------------|----------|
+| **Administrative safeguards** | Access control, training (production); Pilot: local only | Production roadmap |
+| **Physical safeguards** | Production: S3, RDS in compliant regions; Pilot: local filesystem | Production mapping |
+| **Technical safeguards** | Encryption at rest (S3 SSE-KMS); encryption in transit (TLS); no PHI on blockchain | `anchor_hashes.py`; PPRL design |
+| **Audit controls** | Provenance manifest; hash anchoring; linkage map metadata | `data/provenance/`; `data/pprl/` |
+| **Minimum necessary** | OMOP + PPRL use only necessary attributes; no raw PHI in linkage | `PPRL_Design.md` |
+
+### 3.4 21 CFR Part 11 (FDA Electronic Records)
+
+| 21 CFR Part 11 Requirement | TrustChain Implementation | Evidence |
+|---------------------------|---------------------------|----------|
+| **Electronic records integrity** | Hash anchoring of OMOP snapshot, ETL specs, validation scripts, quality reports | `anchor_hashes.py` |
+| **Audit trail** | Provenance manifest with timestamp, asset hashes, run ID | `data/provenance/provenance_manifest_*.json` |
+| **Validation** | Validation scripts versioned; quality reports record checks and AI results | `validate_omop_quality.py`; `data/quality_reports/` |
+| **Access controls** | Production: IAM/RBAC; Pilot: filesystem permissions | Production roadmap |
+
+### 3.5 NO PHI on Blockchain
+
+| Principle | Implementation | Evidence |
+|------------|----------------|----------|
+| **Hash only** | `anchor_hashes.py` outputs only `hash_value` (SHA256); no PHI in manifest | `anchor_hashes.py` |
+| **Linkage map** | PPRL linkage map stored in access-controlled location; only hash anchored, not full map on chain | `PPRL_Design.md` §6.3 |
+| **Provenance metadata** | Manifest contains asset paths, hashes, timestamps; no patient identifiers | `data/provenance/` |
 
 ---
 
-## 五、迁移到生产的步骤建议
+## 4. Compliance Checklist (Pre-Production)
 
-1. **Schema 不变**：OMOP CDM 已标准化，DuckDB → PostgreSQL 仅需 `pgloader` 或 ETL 脚本。
-2. **脚本容器化**：将 `load_*`、`validate_*`、`anchor_*` 打包为 Docker 镜像，在 ECS / Lambda 中运行。
-3. **配置外置**：数据库连接、S3 路径、区块链端点等从环境变量/Secrets Manager 读取。
-4. **Hash 输出改链**：`anchor_hashes.py` 的逻辑不变，将 manifest 提交到 Hyperledger Fabric / 其他 permissioned chain 的 API。
+- [ ] Data encryption (TLS in transit, KMS at rest)
+- [ ] Access control (IAM / RBAC, least privilege)
+- [ ] Audit logging (who accessed/modified what, when)
+- [ ] Data retention and deletion policy (GDPR right to erasure)
+- [ ] AI model governance (EU AI Act: data, monitoring, documentation)
+- [ ] No PHI on blockchain (hashes/metadata only)
+- [ ] DPIA for production with real PHI
+- [ ] BAA with cloud provider (HIPAA)
 
 ---
 
-*文档版本：初稿 | 日期：2026-03-12*
+## 5. AI Module Extensibility
+
+| Current Implementation | Production Extension |
+|------------------------|----------------------|
+| Rule engine (null, time logic, foreign key) | Retain as first line of defense |
+| scenario1: Isolation Forest; scenario2: IF+LOF+OCSVM ensemble | Replaceable with SageMaker custom models, LLM validation |
+| Future: Gap prediction model | XGBoost / neural network, hosted on SageMaker |
+
+**Design principle**: AI modules are decoupled from data and storage layers; inputs/outputs are structured JSON for easy replacement and versioning.
+
+---
+
+## 6. Migration to Production
+
+1. **Schema unchanged**: OMOP CDM is standardized; DuckDB → PostgreSQL requires `pgloader` or ETL script only.
+2. **Containerize scripts**: Package `load_*`, `validate_*`, `anchor_*` as Docker images; run on ECS / Lambda.
+3. **Externalize config**: Database connection, S3 paths, blockchain endpoint from environment variables / Secrets Manager.
+4. **Hash output to chain**: `anchor_hashes.py` logic unchanged; submit manifest to Hyperledger Fabric or other permissioned chain API.
+
+---
+
+*Document version: 1.0 | Date: 2026-03-12*

@@ -8,7 +8,7 @@ Data setup and initial exploratory data analysis (EDA) for RWD/OMOP pipeline.
 |--------|---------|
 | `download_synthea_omop.sh` | Download Synthea OMOP 1k from AWS S3 |
 | `load_synthea_duckdb.py` | Load OMOP CSVs into DuckDB |
-| `synthea_omop_exploration.ipynb` | Explore data, run treatment-gap analysis |
+| `synthea_omop_exploration.ipynb` | Explore data, HBV-style cascade (Testing→Diagnosis→Treatment), treatment-gap analysis |
 
 ## Purpose
 

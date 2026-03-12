@@ -44,6 +44,7 @@ def anchor_assets() -> dict:
         ("ETL spec: load", PROJECT_ROOT / "01-initial-notebook" / "load_synthea_duckdb.py"),
         ("ETL spec: download", PROJECT_ROOT / "01-initial-notebook" / "download_synthea_omop.sh"),
         ("Validation script", PROJECT_ROOT / "02-data-sampling-feature" / "validate_omop_quality.py"),
+        ("PPRL demo script", PROJECT_ROOT / "02-data-sampling-feature" / "pprl_multi_source_demo.py"),
     ]
 
     for label, path in assets:
@@ -70,6 +71,29 @@ def anchor_assets() -> dict:
             manifest["anchored_assets"].append(
                 {"asset": label, "path": str(path), "status": "error", "error": str(e)}
             )
+
+    # Latest PPRL linkage map (if exists)
+    pprl_dir = PROJECT_ROOT / "data" / "pprl"
+    if pprl_dir.exists():
+        linkage_reports = sorted(pprl_dir.glob("linkage_map_*.json"), reverse=True)
+        if linkage_reports:
+            latest = linkage_reports[0]
+            try:
+                h = sha256_file(latest)
+                manifest["anchored_assets"].append(
+                    {
+                        "asset": "PPRL linkage map (latest)",
+                        "path": str(latest.relative_to(PROJECT_ROOT)),
+                        "hash_algorithm": "SHA256",
+                        "hash_value": h,
+                        "size_bytes": latest.stat().st_size,
+                        "status": "anchored",
+                    }
+                )
+            except Exception as e:
+                manifest["anchored_assets"].append(
+                    {"asset": "PPRL linkage map", "path": str(latest), "status": "error", "error": str(e)}
+                )
 
     # Latest quality report
     report_dir = PROJECT_ROOT / "data" / "quality_reports"

@@ -1,29 +1,29 @@
 # RWD TrustChain — Full Loop & Timeline
 
-> 本文档说明 TrustChain 端到端流程、与 AWS 架构的对应关系，以及项目时间线与里程碑。
+> End-to-end TrustChain flow, mapping to AWS architecture, and project timeline with milestones.
 
 ---
 
-## 一、架构文档 vs 实际实现
+## 1. Architecture vs Implementation
 
-| 维度 | AWS 架构文档 (RWD TrustChain Tech Architecture.png) | 本 Pilot 实现 |
-|------|------------------------------------------------------|---------------|
-| **定位** | 生产级参考架构（云原生、可扩展） | 本地 Demo / PoC（验证概念、可复现） |
-| **数据源** | EHR、Lab、Pharmacy、Claims 多源 | Synthea OMOP 单源（模拟多源） |
-| **Secure Landing** | S3 + SSE-KMS + IAM | 本地 `data/synthea1k/` |
+| Dimension | AWS Architecture (RWD TrustChain Tech Architecture.png) | Pilot Implementation |
+|-----------|----------------------------------------------------------|----------------------|
+| **Scope** | Production reference (cloud-native, scalable) | Local Demo / PoC (concept validation, reproducible) |
+| **Data sources** | EHR, Lab, Pharmacy, Claims (multi-source) | Synthea OMOP single source (simulates multi-source) |
+| **Secure Landing** | S3 + SSE-KMS + IAM | Local `data/synthea1k/` |
 | **ETL & OMOP** | AWS Glue + RDS PostgreSQL | `load_synthea_duckdb.py` + DuckDB |
-| **PPRL** | 独立 PPRL Service | 设计预留（单源暂无） |
-| **AI Validation** | SageMaker | `validate_omop_quality.py`（规则引擎） |
+| **PPRL** | Standalone PPRL Service | Design: `PPRL_Design.md`; Demo: `pprl_multi_source_demo.py` (`--pprl`) |
+| **AI Validation** | SageMaker | `validate_omop_quality.py` (rules + scenario1/scenario2 anomaly detection) |
 | **Hash Anchoring** | SageMaker → Blockchain | `anchor_hashes.py` → JSON manifest |
-| **Governance Dashboard** | 独立 Dashboard | 待实现（Streamlit） |
+| **Governance Dashboard** | Standalone Dashboard | `04-deployment/app.py` (Streamlit, HBV cascade, MLflow link) — http://localhost:8501 |
 
-**结论**：架构文档描述的是 **AWS 生产蓝图**；本 Pilot 用 **本地/轻量工具** 实现 **同一概念流程**，便于快速验证和演示。
+**Conclusion**: The architecture describes the **AWS production blueprint**; the Pilot implements the **same conceptual flow** with local/lightweight tools for rapid validation and demo.
 
 ---
 
-## 二、TrustChain Full Loop（端到端流程）
+## 2. TrustChain Full Loop
 
-### 2.1 概念层（与架构图一致）
+### 2.1 Conceptual Layer (aligned with architecture diagram)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -46,29 +46,33 @@
   └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 2.2 本 Pilot 实现层（Step-by-Step）
+### 2.2 Pilot Implementation (Step-by-Step)
 
-| Step | 概念环节 | 本 Pilot 实现 | 产出物 |
-|------|----------|---------------|--------|
+| Step | Concept | Pilot Implementation | Output |
+|------|---------|----------------------|--------|
 | **1** | Ingest | `download_synthea_omop.sh` | `data/synthea1k/*.csv` |
 | **2** | Standardize | `load_synthea_duckdb.py` | `data/synthea1k.duckdb` |
 | **3** | Validate | `validate_omop_quality.py` | `data/quality_reports/quality_report_*.json` |
+| **3b** | PPRL (optional) | `pprl_multi_source_demo.py` | `data/pprl/linkage_map_*.json` |
 | **4** | Anchor | `anchor_hashes.py` | `data/provenance/provenance_manifest_*.json` |
-| **5** | Govern | Streamlit Dashboard（待实现） | 可视化界面 |
+| **5** | Govern | `04-deployment/app.py` (Streamlit) | HBV cascade, quality metrics, provenance, MLflow link |
 
-### 2.3 数据流与信任链
+### 2.3 Data Flow & Trust Chain
 
 ```
 Synthea OMOP (AWS S3)
         │
         ▼
-  data/synthea1k/*.csv  ──────────────────────────────────────────────────────────
-        │                                                                          │
-        ▼                                                                          │
-  synthea1k.duckdb  ──► validate_omop_quality.py  ──► quality_report_*.json         │
-        │                          │                            │                  │
-        │                          │                            │                  │
-        └──────────────────────────┴────────────────────────────┴──────────────────┘
+  data/synthea1k/*.csv
+        │
+        ▼
+  synthea1k.duckdb  ──► validate_omop_quality.py  ──► quality_report_*.json
+        │                          │                          │
+        │  (optional --pprl)       │                          │
+        ▼                          │                          │
+  pprl_multi_source_demo.py  ──► linkage_map_*.json          │
+        │                          │                          │
+        └──────────────────────────┴──────────────────────────┘
                                         │
                                         ▼
                               anchor_hashes.py
@@ -77,62 +81,56 @@ Synthea OMOP (AWS S3)
                               provenance_manifest_*.json
                                         │
                                         ▼
-                              Governance Dashboard (Provenance Audit Trail)
+                              Governance Dashboard (http://localhost:8501)
 ```
 
 ---
 
-## 三、Timeline & Milestone
+## 3. Timeline & Milestones
 
-### 3.1 总体时间线
+### 3.1 Milestone Summary
 
-```
-Week 1–2           Week 3              Week 4              Week 5+
-─────────────────────────────────────────────────────────────────────────────►
-│ Data + EDA      │ Validation +      │ Hash Anchor +     │ Dashboard +
-│ + Quality       │ Refinement        │ Pipeline          │ Deploy + Doc
-└────────────────┘└──────────────────┘└──────────────────┘└──────────────────┘
-   M1 完成           M2 完成             M3 完成              M4 完成
-```
+| Milestone | Content | Status | Deliverable |
+|-----------|---------|---------|-------------|
+| **M1: Data & EDA** | Data acquisition, load, exploration | ✅ Done | `01-initial-notebook/` |
+| **M2: Quality Validation** | Rules, completeness, time logic | ✅ Done | `validate_omop_quality.py` + JSON |
+| **M3: Hash Anchoring** | Hash anchoring, provenance manifest | ✅ Done | `anchor_hashes.py` + manifest |
+| **M4: Governance Dashboard** | Streamlit (HBV cascade, MLflow link) | ✅ Done | `04-deployment/app.py` |
+| **M5: End-to-End Pipeline** | One-click run script | ✅ Done | `run_demo.sh` |
+| **M6: PPRL Design** | Privacy-preserving linkage design | ✅ Done | `docs/Proposal/PPRL_Design.md` |
+| **M7: Deploy** | Deploy to Render / cloud | 🔲 Pending | Public URL |
+| **M8: Proposal Final** | Unify and update `docs/Proposal/` | ✅ Done | This document |
 
-### 3.2 里程碑明细
-
-| 里程碑 | 内容 | 状态 | 交付物 |
-|--------|------|------|--------|
-| **M1: Data & EDA** | 数据获取、加载、探索 | ✅ Done | `01-initial-notebook/` 全套 |
-| **M2: Quality Validation** | 质量规则、完整性、时间逻辑 | ✅ Done | `validate_omop_quality.py` + JSON |
-| **M3: Hash Anchoring** | 哈希锚定、Provenance manifest | ✅ Done | `anchor_hashes.py` + manifest |
-| **M4: Governance Dashboard** | Streamlit 可视化 | 🔲 Pending | `04-deployment/dashboard.py` |
-| **M5: End-to-End Pipeline** | 一键运行脚本 | 🔲 Pending | `run_demo.sh` 或 `Makefile` |
-| **M6: PPRL Design** | 隐私保护链接设计文档 | 🔲 Pending | `docs/PPRL_Design.md` |
-| **M7: Deploy** | 部署到 Render / 云 | 🔲 Pending | 可访问 URL |
-| **M8: Proposal Final** | 提案定稿、架构对齐 | 🔲 Pending | 更新 `docs/Proposal/` |
-
-### 3.3 建议执行顺序
+### 3.2 Next Steps
 
 ```
-当前进度: M1 ✅  M2 ✅  M3 ✅
+Current: M1 ✅ M2 ✅ M3 ✅ M4 ✅ M5 ✅ M6 ✅ M8 ✅
 
-下一步:
-  1. M4 — Governance Dashboard（Streamlit）
-  2. M5 — run_demo.sh 串联全流程
-  3. M6 — PPRL 设计文档（可并行）
-  4. M7 — 部署
-  5. M8 — 提案定稿
+Remaining: M7 — Deploy
 ```
 
 ---
 
-## 四、Demo 交付清单
+## 4. Demo Deliverables
 
-| 类别 | 交付物 | 说明 |
-|------|--------|------|
-| **可运行** | `run_demo.sh` | 一条命令跑完 01→02→03 |
-| **可展示** | Streamlit Dashboard | 质量指标、Provenance 链、Gap 统计 |
-| **可审计** | `data/provenance/*.json` | 哈希 manifest，可验证完整性 |
-| **可复现** | README + requirements.txt | 环境与步骤说明 |
-| **可扩展** | 架构文档 + PPRL 设计 | 与 AWS 生产架构对齐的路线图 |
+| Category | Deliverable | Description |
+|----------|-------------|-------------|
+| **Runnable** | `run_demo.sh` | 01→02→03→04; optional `--mlflow`, `--pprl` |
+| **Dashboard** | Streamlit | http://localhost:8501 — HBV cascade, quality, provenance, MLflow link |
+| **Auditable** | `data/provenance/*.json` | Hash manifest for integrity verification |
+| **Reproducible** | README + requirements.txt | Environment and steps |
+| **Extensible** | Architecture + PPRL + Compliance | [PPRL_Design.md](PPRL_Design.md), [Production_Readiness_and_Compliance.md](Production_Readiness_and_Compliance.md) |
 
 ---
 
-*文档生成日期：2026-03-12*
+## 5. Related Documents
+
+| Document | Purpose |
+|----------|---------|
+| [RWD_TrustChain_Architecture_Explaination.md](RWD_TrustChain_Architecture_Explaination.md) | Architecture overview, blockchain design |
+| [PPRL_Design.md](PPRL_Design.md) | Privacy-preserving record linkage design |
+| [Production_Readiness_and_Compliance.md](Production_Readiness_and_Compliance.md) | GDPR, EU AI Act, HIPAA, 21 CFR Part 11 mapping |
+
+---
+
+*Document version: 1.0 | Date: 2026-03-12*

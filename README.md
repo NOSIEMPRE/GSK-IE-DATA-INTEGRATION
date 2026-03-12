@@ -6,6 +6,7 @@ Real-world data (RWD) integration pilot for Hepatitis B, aligned with the GSK IE
 
 ```
 ├── README.md
+├── run_demo.sh              # One-click demo
 ├── .gitignore
 ├── .flake8
 ├── requirements.txt
@@ -17,11 +18,16 @@ Real-world data (RWD) integration pilot for Hepatitis B, aligned with the GSK IE
 │   ├── download_synthea_omop.sh
 │   ├── load_synthea_duckdb.py
 │   └── synthea_omop_exploration.ipynb
-├── 02-data-sampling-feature/   # Sampling & feature engineering
-│   └── validate_omop_quality.py
+├── 02-data-sampling-feature/   # Sampling & validation
+│   └── validate_omop_quality.py   # --scenario scenario1|scenario2
 ├── 03-experiment-tracking/     # ML experiment tracking & hash anchoring
-│   └── anchor_hashes.py
-├── 04-deployment/              # Deployment scripts & configs
+│   ├── anchor_hashes.py
+│   ├── run_with_mlflow.py      # Log validation runs to MLflow
+│   ├── scenario-1.ipynb        # Baseline: rules + Isolation Forest
+│   ├── scenario-2.ipynb       # AI-enhanced: multi-field + ensemble (IF+LOF+OCSVM)
+│   └── mlflow_ui.sh           # Launch MLflow UI from project root
+├── 04-deployment/              # Governance Dashboard (Streamlit)
+│   └── app.py                  # HBV cascade, quality, provenance, MLflow link
 ├── 05-monitoring/              # Pipeline monitoring
 ├── 06-cicd/                    # CI/CD pipelines
 ├── data/                       # Raw & processed datasets
@@ -54,6 +60,20 @@ source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+## One-Click Demo
+
+```bash
+bash run_demo.sh
+```
+
+Runs: download → load → validate → anchor → Streamlit Governance Dashboard.
+
+| Flag | Description |
+|------|-------------|
+| `--no-ui` | Skip Streamlit dashboard |
+| `--mlflow` | Log validation + anchor to MLflow (experiment tracking) |
+| `--pprl` | Run PPRL multi-source linkage demo (EHR + Lab simulation) |
+
 ## Data Setup (Synthea OMOP)
 
 The pilot uses [Synthea OMOP](https://registry.opendata.aws/synthea-omop/) synthetic data. To download and load:
@@ -70,9 +90,15 @@ jupyter notebook 01-initial-notebook/synthea_omop_exploration.ipynb
 
 # 4. Run data quality validation (outputs JSON report)
 python 02-data-sampling-feature/validate_omop_quality.py
+# With scenario: --scenario scenario1 (default) or --scenario scenario2
 
 # 5. Hash anchoring (provenance manifest for audit trail)
 python 03-experiment-tracking/anchor_hashes.py
+
+# 6. (Optional) MLflow experiment tracking
+python 03-experiment-tracking/run_with_mlflow.py --scenario scenario1
+python 03-experiment-tracking/run_with_mlflow.py --scenario scenario2
+# View: bash 03-experiment-tracking/mlflow_ui.sh → http://localhost:5000
 ```
 
 This creates `data/synthea1k/` (CSV), `data/synthea1k.duckdb` (queryable database), `data/quality_reports/` (validation reports), and `data/provenance/` (hash manifests).
@@ -86,6 +112,14 @@ The repo is set up for deployment:
 - **`05-monitoring/`** — Health checks, data quality metrics, alerting
 - **`06-cicd/`** + **`.github/workflows/`** — Automated CI/CD
 
+**Governance Dashboard** — http://localhost:8501
+
+```bash
+streamlit run 04-deployment/app.py
+```
+
+Features: HBV cascade (Testing→Diagnosis→Treatment), data quality & AI validation, provenance manifest, MLflow link (sidebar).
+
 To deploy: connect the repo to [Render](https://render.com), uncomment and configure services in `render.yaml`, then add your app code in `04-deployment/`.
 
 ## Key Documentation
@@ -93,7 +127,9 @@ To deploy: connect the repo to [Render](https://render.com), uncomment and confi
 - **[Architecture (EN)](docs/Proposal/RWD_TrustChain_Architecture_Explaination.md)** — RWD TrustChain technical architecture and blockchain design assessment
 - **[Architecture (中文)](docs/Proposal/RWD_TrustChain_Architecture_CN.md)** — 技术架构说明与区块链设计评估
 - **[Full Loop & Timeline](docs/Proposal/TrustChain_FullLoop_and_Timeline.md)** — 端到端流程、与 AWS 架构对应、时间线与里程碑
-- **[Production Readiness & Compliance](docs/Proposal/Production_Readiness_and_Compliance.md)** — 生产映射、扩展路径、合规清单
+- **[Proposal Index](docs/Proposal/README.md)** — All proposal documents
+- **[Production Readiness & Compliance](docs/Proposal/Production_Readiness_and_Compliance.md)** — Production mapping, GDPR/EU AI Act/HIPAA/21 CFR Part 11 compliance mapping
+- **[PPRL Design](docs/Proposal/PPRL_Design.md)** — Privacy-preserving record linkage design
 - **[Challenge Objective](docs/Challenge/GSK%20-%20IE%20Challenge%20Data%20Objective.docx.md)** — GSK IE Challenge objectives and requirements
 
 ## Compliance

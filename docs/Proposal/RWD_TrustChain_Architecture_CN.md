@@ -14,12 +14,14 @@
 
 ### 1. 数据源层：Fragmented RWD (Hepatitis B)
 
-| 数据源 | 说明 |
-|--------|------|
-| **EHR Systems** | 电子健康记录系统，医院/诊所的患者病历、就诊记录、诊断信息 |
-| **Lab Data** | 实验室数据，如 HBsAg、HBV DNA、ALT/AST 等检测结果和生物标记物 |
-| **Pharmacy Records** | 药房记录，用药历史、处方信息、抗病毒药物发放记录 |
-| **Claims Data** | 理赔/管理数据，就诊、检查、用药等报销相关数据 |
+
+| 数据源                  | 说明                                        |
+| -------------------- | ----------------------------------------- |
+| **EHR Systems**      | 电子健康记录系统，医院/诊所的患者病历、就诊记录、诊断信息             |
+| **Lab Data**         | 实验室数据，如 HBsAg、HBV DNA、ALT/AST 等检测结果和生物标记物 |
+| **Pharmacy Records** | 药房记录，用药历史、处方信息、抗病毒药物发放记录                  |
+| **Claims Data**      | 理赔/管理数据，就诊、检查、用药等报销相关数据                   |
+
 
 **作用**：作为数据管道的起点，提供多维度、分散的原始患者数据，是后续整合与分析的输入来源。
 
@@ -97,12 +99,14 @@
 
 ### 4. 合规性声明（底部）
 
-| 合规项 | 说明 |
-|--------|------|
-| **GDPR & HIPAA Compliant** | 符合欧盟通用数据保护条例和美国医疗隐私法规 |
-| **EU AI Act Ready** | 满足欧盟 AI 法案对高风险 AI 系统的治理要求 |
-| **21 CFR Part 11 Audit Trail** | 满足 FDA 对电子记录与电子签名的审计追踪要求 |
-| **NO PHI on Blockchain** | 区块链上不存储个人健康信息，仅存储哈希等元数据 |
+
+| 合规项                            | 说明                        |
+| ------------------------------ | ------------------------- |
+| **GDPR & HIPAA Compliant**     | 符合欧盟通用数据保护条例和美国医疗隐私法规     |
+| **EU AI Act Ready**            | 满足欧盟 AI 法案对高风险 AI 系统的治理要求 |
+| **21 CFR Part 11 Audit Trail** | 满足 FDA 对电子记录与电子签名的审计追踪要求  |
+| **NO PHI on Blockchain**       | 区块链上不存储个人健康信息，仅存储哈希等元数据   |
+
 
 ---
 
@@ -122,13 +126,15 @@
 
 ### 3.2 合理性分析
 
-| 维度 | 评估 | 说明 |
-|------|------|------|
-| **隐私保护** | ✅ 合理 | 不将 PHI 上链，避免 GDPR「被遗忘权」、HIPAA 最小必要原则等合规风险；区块链不可篡改与「删除权」的冲突得以规避 |
-| **数据完整性** | ✅ 合理 | 哈希是数据的密码学指纹，任何篡改都会导致哈希变化；链上哈希提供不可篡改的完整性证明 |
-| **可追溯性** | ✅ 合理 | 对 OMOP 快照、ETL 规范、AI 报告等关键资产锚定哈希，可形成从原始数据到分析结果的完整 Provenance 链 |
-| **合规性** | ✅ 合理 | 符合 21 CFR Part 11 对电子记录可审计性的要求，同时兼顾 GDPR、HIPAA、EU AI Act |
-| **性能与扩展性** | ✅ 合理 | 大数据集存于 S3/RDS，区块链只承担「验证与信任」职责，避免链上存储海量数据带来的性能瓶颈 |
+
+| 维度         | 评估   | 说明                                                             |
+| ---------- | ---- | -------------------------------------------------------------- |
+| **隐私保护**   | ✅ 合理 | 不将 PHI 上链，避免 GDPR「被遗忘权」、HIPAA 最小必要原则等合规风险；区块链不可篡改与「删除权」的冲突得以规避 |
+| **数据完整性**  | ✅ 合理 | 哈希是数据的密码学指纹，任何篡改都会导致哈希变化；链上哈希提供不可篡改的完整性证明                      |
+| **可追溯性**   | ✅ 合理 | 对 OMOP 快照、ETL 规范、AI 报告等关键资产锚定哈希，可形成从原始数据到分析结果的完整 Provenance 链  |
+| **合规性**    | ✅ 合理 | 符合 21 CFR Part 11 对电子记录可审计性的要求，同时兼顾 GDPR、HIPAA、EU AI Act       |
+| **性能与扩展性** | ✅ 合理 | 大数据集存于 S3/RDS，区块链只承担「验证与信任」职责，避免链上存储海量数据带来的性能瓶颈                |
+
 
 ---
 
@@ -165,6 +171,26 @@ Governance Dashboard (质量指标 + HBV 级联 + Provenance Audit Trail)
 ## 五、结论
 
 RWD TrustChain 架构中的区块链设计采用 **哈希锚定 + 链下数据** 模式，在医疗 RWD 场景下是**合理且成熟**的做法。它既发挥了区块链的不可篡改与可审计优势，又避免了 PHI 上链带来的隐私与合规风险，与 GSK Challenge 文档中「anchoring dataset fingerprints on a permissioned blockchain」的目标一致。
+
+---
+
+## 六、Pilot 实现状态
+
+参考架构已实现为本地 Pilot：
+
+
+| 组件        | Pilot 实现                                                                                                               |
+| --------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **数据**    | Synthea OMOP 1k（DuckDB）                                                                                                |
+| **验证**    | `validate_omop_quality.py` — scenario1（Isolation Forest）、scenario2（IF+LOF+OCSVM 集成）                                    |
+| **哈希锚定**  | `anchor_hashes.py` → provenance manifest                                                                               |
+| **治理仪表盘** | `04-deployment/app.py` — [http://localhost:8501](http://localhost:8501) — HBV 级联、质量指标、Provenance、MLflow 链接             |
+| **实验追踪**  | MLflow（`rwd-trustchain-quality`），scenario1/scenario2 notebooks                                                         |
+| **PPRL**  | 设计：[PPRL_Design.md](PPRL_Design.md)；Demo：`pprl_multi_source_demo.py`（`run_demo.sh --pprl`）                             |
+| **合规映射**  | [Production_Readiness_and_Compliance.md](Production_Readiness_and_Compliance.md) — GDPR、EU AI Act、HIPAA、21 CFR Part 11 |
+
+
+详见 [TrustChain_FullLoop_and_Timeline.md](TrustChain_FullLoop_and_Timeline.md) 获取完整流程与里程碑。
 
 ---
 

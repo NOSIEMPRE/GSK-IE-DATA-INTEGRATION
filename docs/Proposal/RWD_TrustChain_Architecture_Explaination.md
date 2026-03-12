@@ -235,4 +235,24 @@ The blockchain design in the RWD TrustChain architecture follows a **hash anchor
 
 ---
 
+---
+
+## 7. Pilot Implementation Status
+
+The reference architecture is implemented as a local pilot:
+
+| Component | Pilot Implementation |
+|-----------|----------------------|
+| **Data** | Synthea OMOP 1k (DuckDB) |
+| **Validation** | `validate_omop_quality.py` — scenario1 (Isolation Forest), scenario2 (IF+LOF+OCSVM ensemble) |
+| **Hash Anchoring** | `anchor_hashes.py` → provenance manifest |
+| **Governance Dashboard** | `04-deployment/app.py` — http://localhost:8501 — HBV cascade, quality, provenance, MLflow link |
+| **Experiment Tracking** | MLflow (`rwd-trustchain-quality`), scenario1/scenario2 notebooks |
+| **PPRL** | Design: [PPRL_Design.md](PPRL_Design.md); Demo: `pprl_multi_source_demo.py` (`run_demo.sh --pprl`) |
+| **Compliance** | [Production_Readiness_and_Compliance.md](Production_Readiness_and_Compliance.md) — GDPR, EU AI Act, HIPAA, 21 CFR Part 11 mapping |
+
+See [TrustChain_FullLoop_and_Timeline.md](TrustChain_FullLoop_and_Timeline.md) for the full pipeline and milestones.
+
+---
+
 *Document generated: 2026-03-12*

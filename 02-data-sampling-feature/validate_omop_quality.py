@@ -24,6 +24,9 @@ import pandas as pd
 try:
     import numpy as np
     from sklearn.ensemble import IsolationForest
+    from sklearn.neighbors import LocalOutlierFactor
+    from sklearn.svm import OneClassSVM
+    from sklearn.preprocessing import StandardScaler
 
     SKLEARN_AVAILABLE = True
 except ImportError:
@@ -81,8 +84,11 @@ TIME_LOGIC = [
 ]
 
 
-def run_checks(con: duckdb.DuckDBPyConnection) -> dict:
-    """Run all validation checks and return a structured report."""
+def run_checks(con: duckdb.DuckDBPyConnection, scenario: str = "scenario1") -> dict:
+    """Run all validation checks and return a structured report.
+
+    scenario: "scenario1" = Isolation Forest only; "scenario2" = multi-field ensemble (IF+LOF+OCSVM)
+    """
     report = {
         "run_id": datetime.now(timezone.utc).isoformat(),
         "database": str(DB_PATH),
@@ -185,8 +191,9 @@ def run_checks(con: duckdb.DuckDBPyConnection) -> dict:
             report["checks"][table]["referential_integrity"] = {"error": str(e)}
             report["summary"]["failed"] += 1
 
-    # 5. AI anomaly detection (Isolation Forest on measurement.value_as_number)
-    report["ai_validation"] = run_ai_anomaly_detection(con, tables)
+    # 5. AI anomaly detection (scenario1=IF only; scenario2=multi-field ensemble)
+    ai_fn = run_ai_anomaly_detection_scenario2 if scenario == "scenario2" else run_ai_anomaly_detection
+    report["ai_validation"] = ai_fn(con, tables)
 
     return report
 
@@ -262,7 +269,115 @@ def run_ai_anomaly_detection(con: duckdb.DuckDBPyConnection, tables: list) -> di
     return result
 
 
+def run_ai_anomaly_detection_scenario2(con: duckdb.DuckDBPyConnection, tables: list) -> dict:
+    """Scenario 2: Multi-field + ensemble (Isolation Forest + LOF + One-Class SVM) voting."""
+    result = {
+        "module": "Ensemble (IF+LOF+OCSVM)",
+        "target": "multi-field",
+        "status": "skipped",
+        "anomaly_count": None,
+        "total_analyzed": None,
+        "contamination": 0.01,
+        "sample_anomaly_ids": [],
+        "by_field": {},
+    }
+
+    if not SKLEARN_AVAILABLE:
+        result["status"] = "skipped"
+        result["reason"] = "scikit-learn not installed"
+        return result
+
+    targets = [
+        ("measurement", "measurement_id", "value_as_number"),
+        ("drug_exposure", "drug_exposure_id", "quantity"),
+    ]
+
+    total_anomalies = 0
+    total_rows = 0
+    all_anomaly_ids = []
+
+    for target_table, id_col, value_col in targets:
+        if target_table not in tables:
+            continue
+
+        try:
+            df = con.execute(
+                f"""
+                SELECT {id_col}, {value_col}
+                FROM {target_table}
+                WHERE {value_col} IS NOT NULL
+                """
+            ).fetchdf()
+
+            df[value_col] = pd.to_numeric(df[value_col], errors="coerce")
+            df = df.dropna(subset=[value_col])
+
+            if len(df) < 30:
+                continue
+
+            X = df[value_col].values.reshape(-1, 1).astype(np.float64)
+            X_scaled = StandardScaler().fit_transform(X)
+
+            # Ensemble: IF, LOF, OCSVM — anomaly if >= 2 agree
+            pred_if = IsolationForest(contamination=0.01, random_state=42).fit_predict(X_scaled)
+            pred_lof = LocalOutlierFactor(contamination=0.01, novelty=False).fit_predict(X_scaled)
+
+            # OCSVM can be slow; use sample if > 5k rows
+            max_ocsvm = 5000
+            if len(X_scaled) <= max_ocsvm:
+                pred_oc = OneClassSVM(gamma="scale", nu=0.01).fit_predict(X_scaled)
+            else:
+                rng = np.random.default_rng(42)
+                idx = rng.choice(len(X_scaled), max_ocsvm, replace=False)
+                X_sub = X_scaled[idx]
+                oc = OneClassSVM(gamma="scale", nu=0.01).fit(X_sub)
+                pred_oc = np.ones(len(X_scaled), dtype=int)
+                for i in range(0, len(X_scaled), 1000):
+                    chunk = X_scaled[i : i + 1000]
+                    pred_oc[i : i + len(chunk)] = oc.predict(chunk)
+
+            votes = (pred_if == -1).astype(int) + (pred_lof == -1).astype(int) + (pred_oc == -1).astype(int)
+            anomaly_mask = votes >= 2
+
+            n_anomaly = int(anomaly_mask.sum())
+            total_anomalies += n_anomaly
+            total_rows += len(df)
+
+            result["by_field"][f"{target_table}.{value_col}"] = {
+                "total": len(df),
+                "anomaly_count": n_anomaly,
+                "anomaly_pct": round(n_anomaly / len(df) * 100, 2),
+            }
+
+            if n_anomaly > 0:
+                ids = df.loc[anomaly_mask, id_col].tolist()
+                all_anomaly_ids.extend([(f"{target_table}.{value_col}", int(x)) for x in ids[:5]])
+
+        except Exception as e:
+            result["by_field"][f"{target_table}.{value_col}"] = {"error": str(e)}
+
+    if total_rows == 0:
+        result["status"] = "skipped"
+        result["reason"] = "no numeric columns with sufficient data"
+        return result
+
+    result["status"] = "completed"
+    result["total_analyzed"] = total_rows
+    result["anomaly_count"] = total_anomalies
+    result["anomaly_pct"] = round(total_anomalies / total_rows * 100, 2)
+    result["passed"] = total_anomalies <= int(total_rows * 0.05)
+    result["sample_anomaly_ids"] = [f"{t}:{i}" for t, i in all_anomaly_ids[:10]]
+
+    return result
+
+
 def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(description="OMOP CDM quality validation")
+    parser.add_argument("--scenario", choices=["scenario1", "scenario2"], default="scenario1")
+    args = parser.parse_args()
+
     if not DB_PATH.exists():
         raise SystemExit(
             f"DuckDB database not found: {DB_PATH}\n"
@@ -271,7 +386,7 @@ def main() -> None:
         )
 
     con = duckdb.connect(DB_PATH.as_posix())
-    report = run_checks(con)
+    report = run_checks(con, scenario=args.scenario)
     con.close()
 
     REPORT_DIR.mkdir(parents=True, exist_ok=True)

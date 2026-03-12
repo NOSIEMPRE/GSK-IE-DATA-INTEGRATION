@@ -6,3 +6,9 @@ scikit-learn>=1.3
 
 # Jupyter for notebooks
 jupyter>=1.0
+
+# Dashboard
+streamlit>=1.35
+
+# Experiment tracking
+mlflow>=2.10
