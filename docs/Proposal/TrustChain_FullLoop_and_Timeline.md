@@ -115,7 +115,7 @@ Remaining: M7 — Deploy
 
 | Category | Deliverable | Description |
 |----------|-------------|-------------|
-| **Runnable** | `run_demo.sh` | 01→02→03→04; optional `--mlflow`, `--pprl` |
+| **Runnable** | `run_demo.sh` | 01→02→03→04; `--mlflow` logs scenario1+scenario2 and auto-starts MLflow UI; `--pprl` for PPRL |
 | **Dashboard** | Streamlit | http://localhost:8501 — HBV cascade, quality, provenance, MLflow link |
 | **Auditable** | `data/provenance/*.json` | Hash manifest for integrity verification |
 | **Reproducible** | README + requirements.txt | Environment and steps |

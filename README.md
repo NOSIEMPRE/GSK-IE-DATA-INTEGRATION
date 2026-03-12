@@ -71,7 +71,7 @@ Runs: download → load → validate → anchor → Streamlit Governance Dashboa
 | Flag | Description |
 |------|-------------|
 | `--no-ui` | Skip Streamlit dashboard |
-| `--mlflow` | Log validation + anchor to MLflow (experiment tracking) |
+| `--mlflow` | Log scenario1+scenario2 to MLflow, auto-start MLflow UI in background |
 | `--pprl` | Run PPRL multi-source linkage demo (EHR + Lab simulation) |
 
 ## Data Setup (Synthea OMOP)
@@ -95,10 +95,9 @@ python 02-data-sampling-feature/validate_omop_quality.py
 # 5. Hash anchoring (provenance manifest for audit trail)
 python 03-experiment-tracking/anchor_hashes.py
 
-# 6. (Optional) MLflow experiment tracking
-python 03-experiment-tracking/run_with_mlflow.py --scenario scenario1
-python 03-experiment-tracking/run_with_mlflow.py --scenario scenario2
-# View: bash 03-experiment-tracking/mlflow_ui.sh → http://localhost:5000
+# 6. (Optional) MLflow experiment tracking — one command:
+bash run_demo.sh --mlflow
+# Logs scenario1+scenario2, starts MLflow UI in background → http://localhost:5000
 ```
 
 This creates `data/synthea1k/` (CSV), `data/synthea1k.duckdb` (queryable database), `data/quality_reports/` (validation reports), and `data/provenance/` (hash manifests).

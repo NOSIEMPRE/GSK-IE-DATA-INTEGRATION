@@ -7,7 +7,7 @@ set -euo pipefail
 # Usage:
 #   bash run_demo.sh           # full pipeline + open dashboard
 #   bash run_demo.sh --no-ui   # pipeline only, no Streamlit
-#   bash run_demo.sh --mlflow  # log validation+anchor to MLflow (scenario1 by default)
+#   bash run_demo.sh --mlflow  # log scenario1+scenario2 to MLflow, optionally start MLflow UI
 #   bash run_demo.sh --pprl    # run PPRL multi-source linkage demo
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -16,11 +16,15 @@ cd "${PROJECT_ROOT}"
 NO_UI=false
 USE_MLFLOW=false
 USE_PPRL=false
+START_MLFLOW_UI=false
 for arg in "$@"; do
   [[ "$arg" == "--no-ui" ]] && NO_UI=true
   [[ "$arg" == "--mlflow" ]] && USE_MLFLOW=true
   [[ "$arg" == "--pprl" ]] && USE_PPRL=true
+  [[ "$arg" == "--mlflow-ui" ]] && START_MLFLOW_UI=true
 done
+# --mlflow implies --mlflow-ui when dashboard will run (so you can click the link)
+[[ "$USE_MLFLOW" == "true" && "$NO_UI" != "true" ]] && START_MLFLOW_UI=true
 
 echo "=== RWD TrustChain Demo ==="
 
@@ -38,9 +42,14 @@ python 01-initial-notebook/load_synthea_duckdb.py
 
 # 3–4. Quality validation + hash anchoring (optionally with MLflow)
 if [[ "$USE_MLFLOW" == "true" ]]; then
-  echo "[3–4/5] Running validation + anchoring with MLflow tracking..."
-  python 03-experiment-tracking/run_with_mlflow.py
-  # For scenario2: python 03-experiment-tracking/run_with_mlflow.py --scenario scenario2
+  echo "[3–4/5] Running validation + anchoring with MLflow tracking (scenario1 + scenario2)..."
+  python 03-experiment-tracking/run_with_mlflow.py --scenario scenario1
+  python 03-experiment-tracking/run_with_mlflow.py --scenario scenario2
+  if [[ "$START_MLFLOW_UI" == "true" ]]; then
+    echo "[3b/5] Starting MLflow UI in background (http://localhost:5000)..."
+    nohup bash 03-experiment-tracking/mlflow_ui.sh > /tmp/mlflow_ui.log 2>&1 &
+    sleep 2
+  fi
 else
   echo "[3/5] Running quality validation..."
   python 02-data-sampling-feature/validate_omop_quality.py

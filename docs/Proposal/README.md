@@ -18,5 +18,5 @@ Unified proposal and design documents for the GSK IE Challenge pilot.
 
 - **Dashboard**: [http://localhost:8501](http://localhost:8501)
 - **MLflow**: [http://localhost:5000](http://localhost:5000) (experiment `rwd-trustchain-quality`)
-- **Run demo**: `bash run_demo.sh` (optional: `--mlflow`, `--pprl`)
+- **Run demo**: `bash run_demo.sh` (optional: `--mlflow` logs scenario1+scenario2 and auto-starts MLflow UI; `--pprl` for PPRL demo)
 

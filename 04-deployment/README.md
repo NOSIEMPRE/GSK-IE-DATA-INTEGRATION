@@ -19,7 +19,7 @@ streamlit run 04-deployment/app.py
 - **HBV-Style Care Cascade** — Testing → Diagnosis → Treatment funnel (Synthea proxy)
 - **Data Quality & AI Validation** — Checks passed/failed, anomaly detection (IF or Ensemble)
 - **Provenance & Hash Anchoring** — Manifest ID, anchored assets
-- **MLflow Link** — Sidebar link to http://localhost:5000 (experiment `rwd-trustchain-quality`)
+- **MLflow Link** — Sidebar deep-links to http://localhost:5000 (experiment `rwd-trustchain-quality`) when runs exist. Run `bash run_demo.sh --mlflow` to log scenario1+scenario2 and auto-start MLflow UI.
 
 ## Purpose
 

@@ -36,32 +36,18 @@ Each run logs:
 **Usage** (from project root):
 
 ```bash
-# Scenario 1 (default)
-python 03-experiment-tracking/run_with_mlflow.py
+# One command: logs scenario1 + scenario2, auto-starts MLflow UI in background
+bash run_demo.sh --mlflow
 
-# Scenario 2
+# Or run individually (no UI auto-start):
+python 03-experiment-tracking/run_with_mlflow.py --scenario scenario1
 python 03-experiment-tracking/run_with_mlflow.py --scenario scenario2
-
-# Or via demo with --mlflow
-bash run_demo.sh --mlflow --no-ui
+bash 03-experiment-tracking/mlflow_ui.sh
 ```
 
 **View runs** — MLflow UI: **[http://localhost:5000](http://localhost:5000)**
 
-> ⚠️ Must run from project root, otherwise you'll only see empty "Default". Use the script:
-
-```bash
-bash 03-experiment-tracking/mlflow_ui.sh
-```
-
-Or manually:
-
-```bash
-cd /path/to/GSK\ DATA\ INTEGRATION
-mlflow ui
-```
-
-Then open **[http://localhost:5000](http://localhost:5000)** and select experiment **rwd-trustchain-quality** to compare scenario1/scenario2 runs.
+> ⚠️ Use `bash 03-experiment-tracking/mlflow_ui.sh` so MLflow reads from project `mlruns/`. The Governance Dashboard sidebar link deep-links to `rwd-trustchain-quality` when the experiment exists.
 
 ## Purpose
 

@@ -16,6 +16,7 @@ from pathlib import Path
 
 import json
 
+import altair as alt
 import pandas as pd
 import streamlit as st
 
@@ -25,7 +26,15 @@ try:
 except ImportError:
     DUCKDB_AVAILABLE = False
 
+try:
+    from mlflow.tracking import MlflowClient
+    MLFLOW_AVAILABLE = True
+except ImportError:
+    MLFLOW_AVAILABLE = False
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+MLRUNS_DIR = PROJECT_ROOT / "mlruns"
+MLFLOW_EXPERIMENT_NAME = "rwd-trustchain-quality"
 QUALITY_DIR = PROJECT_ROOT / "data" / "quality_reports"
 PROVENANCE_DIR = PROJECT_ROOT / "data" / "provenance"
 PPRL_DIR = PROJECT_ROOT / "data" / "pprl"
@@ -60,6 +69,24 @@ def load_latest_linkage_map() -> dict | None:
         return None
     with open(reports[0], "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def get_mlflow_experiment_url() -> tuple[str, str]:
+    """
+    Get MLflow UI URL, deep-linking to rwd-trustchain-quality if it exists.
+    Returns (url, caption).
+    """
+    base = "http://localhost:5000"
+    if not MLFLOW_AVAILABLE or not MLRUNS_DIR.exists():
+        return base, "Run `bash 03-experiment-tracking/mlflow_ui.sh` first"
+    try:
+        client = MlflowClient(tracking_uri=MLRUNS_DIR.resolve().as_uri())
+        exp = client.get_experiment_by_name(MLFLOW_EXPERIMENT_NAME)
+        if exp and exp.experiment_id:
+            return f"{base}/#/experiments/{exp.experiment_id}", "Direct link to experiment"
+    except Exception:
+        pass
+    return base, "Run `run_with_mlflow.py` (scenario1 + scenario2) to create runs"
 
 
 def load_hbv_cascade() -> dict | None:
@@ -108,11 +135,12 @@ def main() -> None:
     st.title("RWD TrustChain Governance Dashboard")
     st.caption("Data quality, AI validation, HBV cascade, and provenance overview")
 
-    # Sidebar: MLflow link
+    # Sidebar: MLflow link (deep-link to rwd-trustchain-quality when it exists)
     with st.sidebar:
         st.subheader("Experiment Tracking")
-        st.markdown("[**MLflow UI**](http://localhost:5000) — experiment `rwd-trustchain-quality`")
-        st.caption("Run `bash 03-experiment-tracking/mlflow_ui.sh` first if not started")
+        mlflow_url, mlflow_caption = get_mlflow_experiment_url()
+        st.markdown(f"[**MLflow UI**]({mlflow_url}) — experiment `{MLFLOW_EXPERIMENT_NAME}`")
+        st.caption(mlflow_caption)
 
     # HBV Cascade
     st.subheader("HBV-Style Care Cascade (Testing → Diagnosis → Treatment)")
@@ -141,7 +169,15 @@ def main() -> None:
                 cascade["treated"],
             ],
         })
-        st.bar_chart(funnel_df.set_index("Stage")["Count"])
+        chart = (
+            alt.Chart(funnel_df)
+            .mark_bar()
+            .encode(
+                x=alt.X("Stage", axis=alt.Axis(labelAngle=0)),
+                y="Count",
+            )
+        )
+        st.altair_chart(chart, use_container_width=True)
         st.caption("Gap (tested→diagnosed): %d | Gap (diagnosed→treated): %d" % (
             cascade["gap_tested_not_diagnosed"],
             cascade["gap_diagnosed_not_treated"],
