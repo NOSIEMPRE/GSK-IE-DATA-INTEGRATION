@@ -1,0 +1,47 @@
+{
+  "manifest_id": "20260312_121931",
+  "created_at": "2026-03-12T12:19:31.848480+00:00",
+  "description": "RWD TrustChain provenance manifest (hash anchoring)",
+  "anchored_assets": [
+    {
+      "asset": "OMOP snapshot",
+      "path": "data/synthea1k.duckdb",
+      "hash_algorithm": "SHA256",
+      "hash_value": "6869aeae11d984540ca0b7114321bc52ccf24e93ff2b76abba575a670ca6c251",
+      "size_bytes": 7614464,
+      "status": "anchored"
+    },
+    {
+      "asset": "ETL spec: load",
+      "path": "01-initial-notebook/load_synthea_duckdb.py",
+      "hash_algorithm": "SHA256",
+      "hash_value": "2c0684b7207a14e383568acbd9247268dac20693aa91f952e5a0e70ff2a10200",
+      "size_bytes": 1874,
+      "status": "anchored"
+    },
+    {
+      "asset": "ETL spec: download",
+      "path": "01-initial-notebook/download_synthea_omop.sh",
+      "hash_algorithm": "SHA256",
+      "hash_value": "6c2dcd7b2ae60b50d28f3d567b91f342dfe5bfbaafb0440922e82978678a9b7c",
+      "size_bytes": 501,
+      "status": "anchored"
+    },
+    {
+      "asset": "Validation script",
+      "path": "02-data-sampling-feature/validate_omop_quality.py",
+      "hash_algorithm": "SHA256",
+      "hash_value": "4011f0a6ccefde890a78d53d46e6e7ede26e77e93f42a1193b405a5f248c3490",
+      "size_bytes": 7131,
+      "status": "anchored"
+    },
+    {
+      "asset": "Quality report (latest)",
+      "path": "data/quality_reports/quality_report_20260312_121610.json",
+      "hash_algorithm": "SHA256",
+      "hash_value": "60e17b400c0f0ffe9fe65ce7e8241f968b89e2d8b3ed83c25358fcafb58a240c",
+      "size_bytes": 5973,
+      "status": "anchored"
+    }
+  ]
+}

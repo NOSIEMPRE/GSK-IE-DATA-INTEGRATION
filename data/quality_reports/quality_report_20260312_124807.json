@@ -1,0 +1,267 @@
+{
+  "run_id": "2026-03-12T12:48:07.095980+00:00",
+  "database": "/Users/isabelwu/Desktop/GSK DATA INTEGRATION/data/synthea1k.duckdb",
+  "checks": {
+    "condition_era": {
+      "row_count": 7897,
+      "required_fields": {},
+      "time_logic": {}
+    },
+    "condition_occurrence": {
+      "row_count": 7900,
+      "required_fields": {
+        "condition_occurrence_id": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        },
+        "person_id": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        },
+        "condition_concept_id": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        },
+        "condition_start_date": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        }
+      },
+      "time_logic": {
+        "invalid_count": 0,
+        "rule": "condition_start_date <= condition_end_date",
+        "passed": true
+      },
+      "referential_integrity": {
+        "orphan_person_ids": 0,
+        "passed": true
+      }
+    },
+    "drug_era": {
+      "row_count": 6652,
+      "required_fields": {},
+      "time_logic": {}
+    },
+    "drug_exposure": {
+      "row_count": 29518,
+      "required_fields": {
+        "drug_exposure_id": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        },
+        "person_id": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        },
+        "drug_concept_id": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        },
+        "drug_exposure_start_date": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        }
+      },
+      "time_logic": {
+        "invalid_count": 0,
+        "rule": "drug_exposure_start_date <= drug_exposure_end_date",
+        "passed": true
+      },
+      "referential_integrity": {
+        "orphan_person_ids": 0,
+        "passed": true
+      }
+    },
+    "measurement": {
+      "row_count": 199514,
+      "required_fields": {
+        "measurement_id": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        },
+        "person_id": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        },
+        "measurement_concept_id": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        },
+        "measurement_date": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        }
+      },
+      "time_logic": {},
+      "referential_integrity": {
+        "orphan_person_ids": 0,
+        "passed": true
+      }
+    },
+    "observation": {
+      "row_count": 8518,
+      "required_fields": {
+        "observation_id": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        },
+        "person_id": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        },
+        "observation_concept_id": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        },
+        "observation_date": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        }
+      },
+      "time_logic": {}
+    },
+    "observation_period": {
+      "row_count": 1126,
+      "required_fields": {
+        "observation_period_id": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        },
+        "person_id": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        },
+        "observation_period_start_date": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        },
+        "observation_period_end_date": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        }
+      },
+      "time_logic": {
+        "invalid_count": 0,
+        "rule": "observation_period_start_date <= observation_period_end_date",
+        "passed": true
+      }
+    },
+    "person": {
+      "row_count": 1130,
+      "required_fields": {
+        "person_id": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        },
+        "gender_concept_id": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        },
+        "year_of_birth": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        }
+      },
+      "time_logic": {}
+    },
+    "procedure_occurrence": {
+      "row_count": 17333,
+      "required_fields": {
+        "procedure_occurrence_id": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        },
+        "person_id": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        },
+        "procedure_concept_id": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        },
+        "procedure_date": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        }
+      },
+      "time_logic": {}
+    },
+    "visit_occurrence": {
+      "row_count": 32153,
+      "required_fields": {
+        "visit_occurrence_id": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        },
+        "person_id": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        },
+        "visit_concept_id": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        },
+        "visit_start_date": {
+          "null_count": 0,
+          "null_pct": 0.0,
+          "passed": true
+        }
+      },
+      "time_logic": {
+        "invalid_count": 0,
+        "rule": "visit_start_date <= visit_end_date",
+        "passed": true
+      },
+      "referential_integrity": {
+        "orphan_person_ids": 0,
+        "passed": true
+      }
+    }
+  },
+  "summary": {
+    "passed": 39,
+    "failed": 0,
+    "warnings": 0
+  },
+  "ai_validation": {
+    "module": "Isolation Forest",
+    "target": "drug_exposure.quantity",
+    "status": "completed",
+    "anomaly_count": 0,
+    "total_analyzed": 29518,
+    "contamination": 0.01,
+    "sample_anomaly_ids": [],
+    "anomaly_pct": 0.0,
+    "passed": true
+  }
+}

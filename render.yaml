@@ -1,0 +1,27 @@
+# Render.com deployment config
+# https://render.com/docs/blueprint-spec
+#
+# Usage: Connect repo to Render and this file will configure services.
+# For RWD TrustChain: deploy API, dashboard, or scheduled jobs as needed.
+
+services:
+  # Example: Governance Dashboard (Streamlit / FastAPI)
+  # Uncomment and configure when ready to deploy
+  #
+  # - type: web
+  #   name: gsk-rwd-dashboard
+  #   runtime: python
+  #   buildCommand: pip install -r requirements.txt
+  #   startCommand: streamlit run 04-deployment/app.py --server.port $PORT
+  #   envVars:
+  #     - key: PYTHON_VERSION
+  #       value: 3.11
+
+  # Example: Scheduled ETL / validation job
+  #
+  # - type: cron
+  #   name: gsk-rwd-validation
+  #   runtime: python
+  #   schedule: "0 2 * * *"  # Daily at 2 AM
+  #   buildCommand: pip install -r requirements.txt
+  #   startCommand: python 04-deployment/run_validation.py
